@@ -33,3 +33,17 @@ test('major board searches stop after rate limiting and report source failure',a
 
 
 test('explicit remote location restrictions override broad feed labels',()=>{const p={roles:['Product Manager'],locations:'U.S. remote, Houston, Texas'};assert.equal(matchJob({title:'Product Manager',location:'Worldwide · Remote',description:'Location: Home based, UK (occasional travel)'},p),null);assert.equal(matchJob({title:'Product Manager',location:'New York, United States · Remote',description:'Eligible for New York/New Jersey/Connecticut, Chicago or Charlotte. Remote-flexible with periodic travel.'},p),null);assert.equal(matchJob({title:'Product Manager',location:'Location not specified · Remote'},p),null)});
+
+test('application details generate and save a tailored résumé and sourced cover letter',async()=>{
+ const e=env();
+ await call(e,'profile',{name:'Candidate',summary:'Product owner.',achievements:[{text:'I owned a payments roadmap.',tags:['payments']}],resumeOwnerText:'Candidate\nCompany A | 2022–Present\n- Led interviews.\n- Owned the payments roadmap.\nCompany B | 2020–2022\n- Shipped updates.'});
+ const saved=await call(e,'jobs',{job:{company:'Example',title:'Product Owner',role:'Product Owner',description:'Own the payments roadmap.',companyFact:'Your merchant tools help local businesses accept payments.',companySource:'https://example.com/about'}});
+ const id=saved.body.job.id;
+ const resume=await call(e,'draft',{id,type:'resume'});
+ assert.match(resume.body.text,/Company A \| 2022–Present\n- Owned the payments roadmap\.\n- Led interviews\.\nCompany B/);
+ const cover=await call(e,'draft',{id,type:'cover'});
+ assert.match(cover.body.text,/merchant tools/);
+ assert.equal(cover.body.researchSource,'https://example.com/about');
+ const updated=await call(e,'jobs',{id,expected:saved.body.job.updatedAt,job:{...saved.body.job,resumeDraft:resume.body.text,coverLetter:cover.body.text}});
+ assert.equal(updated.body.job.resumeDraft,resume.body.text);
+});
