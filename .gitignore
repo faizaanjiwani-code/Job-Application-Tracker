@@ -1,0 +1,10 @@
+dist/
+outputs/
+node_modules/
+.env*
+.dev.vars*
+.sites-runtime/
+.wrangler/
+*.sqlite*
+.DS_Store
+private/
